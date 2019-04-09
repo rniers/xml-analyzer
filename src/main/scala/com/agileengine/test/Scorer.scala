@@ -23,10 +23,18 @@ class Scorer(rules: Set[Rule]) {
     sumS / sumW
   }
 
+  def scoreByRule(target: Element, candidate: Element): Map[Rule, (Double, Double, Double)] = {
+
+    rules.map { rule =>
+      val raw = rule.compare(target, candidate)
+      rule -> (raw, raw / rule.maxScore, (raw / rule.maxScore) * rule.weight)
+    }.toMap
+  }
+
 }
 
 object Scorer {
   def apply(): Scorer = new Scorer(
-    Set(CompareAttributes, EqualIds, EqualElements, EqualTitles)
+    Set(CompareAttributes, EqualIds, EqualTags, EqualTitles)
   )
 }
