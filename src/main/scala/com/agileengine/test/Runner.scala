@@ -43,7 +43,14 @@ object Runner {
     * @return
     */
   def xmlPath(element: Element): String = {
-    element.toString
+    def formatElement(element: Element): String =
+      s"${element.tagName()}[${element.elementSiblingIndex()}]"
+
+    val parents = element.parents().asScala
+    if (parents.size > 1) parents.dropRight(1).foldRight(formatElement(parents.last)) {
+      (element, acc) =>
+        acc + " > " + formatElement(element)
+    } else formatElement(parents.head)
   }
 
   case class Config(
