@@ -6,26 +6,38 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.{Document, Element}
 
 import scala.collection.JavaConverters._
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
-object Run {
+object Runner {
 
-
-  def findMostAlike(source: Element, in: Document): Option[Element] = {
+  /** Iterate through all elements in document
+    * and find one with maz score
+    *
+    * @param target - target element
+    * @param in - document to perform lookup in
+    * @param threshold - consider elements only with higher score
+    * @return
+    */
+  def findMostAlike(target: Element, in: Document, threshold: Int = 0): Option[Element] = {
 
     val scorer = Scorer()
     val targets = in.body.select("*")
-    val candidates = mutable.PriorityQueue.empty[(Double, Element)](_._1 compareTo _._1)
 
-    targets.iterator().asScala.foreach { el =>
-      candidates.enqueue((scorer.score(source, el), el))
-    }
+    // todo: elements list might be empty
+    val elementsWithScores = targets.iterator().asScala.map(el => el -> scorer.score(target, el))
 
-    candidates.headOption.map(_._2)
+    if (elementsWithScores.nonEmpty) {
+      val (element, score) = elementsWithScores.maxBy(_._2)
+      if (score >= threshold) Some(element)
+      else None
+    } else None
   }
 
-
+  /** Build xml path for provided element
+    *
+    * @param element
+    * @return
+    */
   def xmlPath(element: Element): String = {
     element.toString
   }
@@ -35,8 +47,6 @@ object Run {
                      sample: File = new File("."),
                      id: String = "make-everything-ok-button"
                    )
-
-
 
   def main(args: Array[String]): Unit = {
 
@@ -63,11 +73,13 @@ object Run {
         val result = for {
           // todo: element might be `null`
           element <- Try(Jsoup.parse(config.in, Charset)).map(_.getElementById(config.id))
-          sampleDocumet <- Try(Jsoup.parse(config.sample, Charset))
-        } yield findMostAlike(element, sampleDocumet)
+          sampleDocument <- Try(Jsoup.parse(config.sample, Charset))
+        } yield findMostAlike(element, sampleDocument)
 
         result match {
-          case Success(Some(element)) => xmlPath(element)
+          case Success(Some(element)) =>
+            println(xmlPath(element))
+
           case Success(None) =>
             println("No such element found")
 
@@ -76,6 +88,7 @@ object Run {
         }
 
       case None =>
+        println("failed to parse config")
     }
   }
 }
